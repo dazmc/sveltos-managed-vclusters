@@ -1,0 +1,13 @@
+---
+apiVersion: config.projectsveltos.io/v1beta1
+kind: ClusterProfile
+metadata:
+  name: deploy-namespace
+spec:
+  clusterSelector:
+    matchLabels:
+      purpose: api
+  policyRefs:
+  - name: create-namespace
+    namespace: default
+    kind: ConfigMap

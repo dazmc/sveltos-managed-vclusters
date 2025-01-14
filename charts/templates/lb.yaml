@@ -1,0 +1,20 @@
+{{- range $developer := .Values.developers }}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: "{{ $developer }}"
+  namespace: default
+  labels:
+    target: vcluster
+spec:
+  selector:
+    app: vcluster
+    release: "{{ $developer }}-managed-vcluster"
+  ports:
+    - name: http
+      port: 80
+      targetPort: 8443
+  type: LoadBalancer
+{{- end }}
+

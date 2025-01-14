@@ -1,0 +1,25 @@
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: managed-vcluster-config-map
+  namespace: projectsveltos
+  annotations:
+    projectsveltos.io/instantiate: ok
+data:
+  sveltos-kubeconfig.yaml: |
+    apiVersion: v1
+    kind: Secret
+    metadata:
+      name: {{ .Resource.metadata.name }}-sveltos-kubeconfig
+      namespace: default
+    data: 
+      kubeconfig: {{ .Resource.data.config }}
+    type: Opaque
+  sveltos-cluster.yaml: |
+    apiVersion: lib.projectsveltos.io/v1beta1
+    kind: SveltosCluster
+    metadata:
+      name: {{ .Resource.metadata.name }}
+      namespace: default
+      

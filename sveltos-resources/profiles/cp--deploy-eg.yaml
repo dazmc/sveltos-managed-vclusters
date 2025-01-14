@@ -1,0 +1,30 @@
+---
+apiVersion: config.projectsveltos.io/v1beta1
+kind: ClusterProfile
+metadata:
+  name: envoy-gateway
+spec:
+  clusterSelector:
+    matchLabels:
+      purpose: api
+  syncMode: Continuous
+  helmCharts:
+  - repositoryURL:    oci://docker.io/envoyproxy/
+    repositoryName:   envoyproxy
+    chartName:        gateway-helm
+    chartVersion:     v0.0.0-latest
+    releaseName:      envoy-gateway
+    releaseNamespace: envoy-gateway-system
+    helmChartAction:  Install
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: create-namespace
+  namespace: default
+data:
+  namespace.yaml: |
+    kind: Namespace
+    apiVersion: v1
+    metadata:
+      name: api

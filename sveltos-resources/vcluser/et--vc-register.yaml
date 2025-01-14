@@ -1,0 +1,18 @@
+---
+apiVersion: lib.projectsveltos.io/v1beta1
+kind: EventTrigger
+metadata:
+  name: vcluster-register-trigger
+spec:
+  sourceClusterSelector:
+    matchLabels:
+      vcluster: host
+  destinationClusterSelector:
+    matchLabels:
+      sveltos-cluster: management
+  eventSourceName: kubectl-secret-event-source
+  oneForEvent: true
+  policyRefs:
+  - name: managed-vcluster-config-map
+    namespace: projectsveltos
+    kind: ConfigMap

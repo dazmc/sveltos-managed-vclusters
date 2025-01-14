@@ -1,0 +1,39 @@
+---
+apiVersion: lib.projectsveltos.io/v1beta1
+kind: EventTrigger
+metadata:
+  name: vcluster-install-trigger
+spec:
+  sourceClusterSelector:
+    matchLabels:
+      vcluster: host
+  eventSourceName: lb-service-event-source
+  oneForEvent: true
+  helmCharts:
+  - chartName: loft/vcluster
+    repositoryName: loft
+    repositoryURL: https://charts.loft.sh/
+    chartVersion:     v0.22.1
+    releaseName:      "{{ .Resource.metadata.name }}-managed-vcluster"
+    releaseNamespace: default
+    helmChartAction:  Install 
+    values: |
+      {{ $ingress := (index .Resource.status.loadBalancer.ingress 0) }} 
+      {{ $portListItem := (index .Resource.spec.ports 0) }}
+      controlPlane:
+        proxy:
+          extraSANs:
+          - {{ $ingress.hostname }}
+      sync:
+        toHost:
+          serviceAccounts:
+            enabled: true
+        fromHost:
+          nodes:
+            enabled: true
+            clearImageStatus: true
+      exportKubeConfig:
+        context: {{ .Resource.metadata.name }}-managed-vcluster
+        server: https://{{ $ingress.hostname }}:{{ $portListItem.port }}
+        secret:
+          name: {{ .Resource.metadata.name }}-managed-vcluster-kubectl-export

@@ -1,0 +1,14 @@
+apiVersion: lib.projectsveltos.io/v1beta1
+kind: EventSource
+metadata:
+  name: lb-service-event-source
+spec:
+  collectResources: true
+  resourceSelectors:
+  - group: ""
+    version: "v1"
+    kind: "Service"
+    labelFilters:
+    - key: target
+      operation: Equal
+      value: vcluster

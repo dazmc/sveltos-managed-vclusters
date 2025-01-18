@@ -47,7 +47,7 @@ This will use the active AWS profile to generate a token for authn/authz every t
 
 It will also set the EKS cluster as your current context.
 
-### EKS Default Storage Class
+### EKS Default Storage Class - EKS CLUSTER
 
 **This is super important!!! If you don't do this, your vCluster pods will be stuck in a Pending state!!!**
 
@@ -63,6 +63,12 @@ annotations:
   "storageclass.kubernetes.io/is-default-class": true
 ```
 
+or annotate the storage class, replace XXXX
+
+```bash
+kubectl annotate sc XXXX storageclass.kubernetes.io/is-default-class=true
+```
+
 ### Register that EKS cluster in Sveltos
 
 You'll need to create a ServiceAccount and corresponding token Secret that Sveltos can use to access the EKS cluster's control plane API.
@@ -73,9 +79,29 @@ Then it's a matter of filling in the blanks in a standard Kubeconfig template: h
 
 P.S. I'm sure there's an automated way to do this, but the 30 seconds of copy-pasta has never been painful enough for me to bother learning how.
 
+```bash
+# get Account iD
+#aws sts get-caller-identity --query "Account" --output text
+# get region
+#aws configure get region
+sveltosctl register cluster --cluster=myeks --namespace=default --kubeconfig=${HOME}/.kcli/clusters/myeks/auth/kubeconfig --fleet-cluster-context=arn:aws:eks:REGION:XXXXXXXXXXX:cluster/myeks
+
+# check it
+kubectl get sveltosclusters.lib.projectsveltos.io -A --show-labels
+```
+
 ## EVENTS!!!
 
 Now the fun part. Change your `kubectl` context back to `kind-management`, and run the following from the root of this repo:
+
+- kind cluster
+
+```bash
+kubectl label sveltosclusters.lib.projectsveltos.io myeks vcluster=host
+kubectl label sveltosclusters.lib.projectsveltos.io -n mgmt mgmt sveltos-cluster=management
+# check it
+kubectl get sveltosclusters.lib.projectsveltos.io -A --show-labels
+```
 
 ```sh
 # applies the event source for load balancer creation
@@ -84,12 +110,21 @@ kubectl apply -f sveltos-resources/lb
 kubectl apply -f sveltos-resources/vcluster
 ```
 
+
+- EKS cluster
+
 You're crushing it.
 
 From here, all you have to do is run the single `helm` command that kicks off the entire automated workflow.
 
 ```sh
 helm upgrade --install developer-load-balancers ./charts
+```
+
+Get the kubeconfig
+
+```bash
+ kubectl get secret dazmc-managed-vcluster-kubectl-export --template={{.data.config}} | base64 -d
 ```
 
 Bangarang, Rufio.

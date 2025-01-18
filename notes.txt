@@ -1,0 +1,53 @@
+ task kind:kind_create
+ task sveltos:deploy
+ vim ~/.kcli/config.yml
+ export AWS_ACCESS_KEY_ID=$(grep access_key_id ~/.kcli/config.yml| awk -F: '{print $2}'| sed 's/ //g')
+ export AWS_SECRET_ACCESS_KEY=$(grep access_key_secret ~/.kcli/config.yml| awk -F: '{print $2}'| sed 's/ //g')
+ aws s3 ls
+ aws ec2 import-key-pair --key-name "myekskey" --public-key-material fileb://~/.ssh/id_rsa.pub
+ # choose subnets or let them kcli choose in the deployment phase
+ kcli list subnets
+ rm -rf /home/dmcrae/.kcli/clusters/myeks
+ kcli create kube eks -P subnet=subnet-04cdee820ae421a02 -P extra_subnets=[subnet-04e62efab361466c3] -P default_addons=False -P apps=[coredns,aws-ebs-csi-driver,eks-pod-identity-agent] myeks
+ sleep 180
+ kubectl get pods -A
+ cilium install  --set cluster.name=myeks --set k8sServiceHost=$(kubectl cluster-info | grep Kubernetes | awk -F/ '{print $3}') --set k8sServicePort=443
+ kubectl get pods -A
+ aws iam create-role --role-name ebs-role --assume-role-policy-document file://infra/crossplane/iam/podidentity-trust-relationship.json --description "EBS role"
+ aws iam list-policies | grep CSI
+ aws iam attach-role-policy --role-name ebs-role --policy-arn=arn:aws:iam::aws:policy/service-role/AmazonEBSCSIDriverPolicy
+ aws iam list-attached-role-policies --role-name ebs-role --output text
+ aws eks create-pod-identity-association --cluster-name myeks --role-arn arn:aws:iam::975049959777:role/ebs-role --namespace kube-system --service-account ebs-csi-controller-sa
+ aws iam list-attached-role-policies --role-name ebs-role --output text
+ kubectl rollout restart -n kube-system deployment ebs-csi-controller
+ kubectl get pods -n kube-system
+ aws eks list-pod-identity-associations --cluster-name myeks
+ kubectl describe pod -n kube-system ebs-csi-controller-7c77d8cc97-8hgg2 | grep AWS
+ export KUBECONFIG=$HOME/.kcli/clusters/myeks/auth/kubeconfig:~/.kube/config
+ kubectl ctx
+ kind export kubeconfig --name dock8s
+ kubectl ctx
+ kubectl get pods -A
+ kubectl config get-contexts
+ sveltosctl register cluster --cluster=myeks --namespace=default --kubeconfig=/home/dmcrae/.kcli/clusters/myeks/auth/kubeconfig --fleet-cluster-context=arn:aws:eks:us-east-1:975049959777:cluster/myeks
+ kubectl get sveltosclusters.lib.projectsveltos.io
+ kubectl get pods --context arn:aws:eks:us-east-1:975049959777:cluster/myeks -A
+ kubectl label sveltosclusters.lib.projectsveltos.io myeks vcluster=host
+ kubectl label sveltosclusters.lib.projectsveltos.io -n mgmt mgmt sveltos-cluster=management
+ kubectl get sveltosclusters.lib.projectsveltos.io --show-labels
+ kubectl ctx
+ kubectl get sc
+ kubectl annotate sc gp2 storageclass.kubernetes.io/is-default-class=true
+ kubectl get sc
+ kubectl ctx
+ kubectl apply -f ../sveltos-managed-vclusters/sveltos-resources/lb
+ kubectl apply -f ../sveltos-managed-vclusters/sveltos-resources/vcluser/
+ kubectl ctx
+ kubectl get pods -A
+ helm upgrade --install developer-load-balancers ../sveltos-managed-vclusters/charts/
+ kubectl get svc
+ kubectl get pods -A
+ kubectl ctx
+ sveltosctl show addons
+ kubectl get secrets
+ kubectl get configmaps
